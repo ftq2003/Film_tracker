@@ -1,0 +1,64 @@
+# ============================================================
+# Film Tracker — files NOT to commit to git
+# ============================================================
+
+# Generated data files (personal, change every run, regenerated)
+tracker_history.csv
+tracker_history.csv.bak
+ebay_history.csv
+ebay_history.csv.bak
+discovery_cache.json
+platform_cache.json
+report.html
+price_history.png
+
+# User-edited config (each user has their own — don't share)
+config.txt
+
+# Debug HTML files written when scraping fails (large, transient)
+_debug_*.html
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ============================================================
+# Editors / IDEs
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# OS
+# ============================================================
+desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================
+# Misc
+# ============================================================
+*.log
+.env
