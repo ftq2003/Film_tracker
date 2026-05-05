@@ -11,9 +11,9 @@ The HTML report opens automatically and includes:
 - eBay cheapest active listings per film
 - Price history plot (after a few runs accumulate data)
 <img width="1867" height="1338" alt="image" src="https://github.com/user-attachments/assets/a93709eb-81fc-4697-a578-4cb62c2603e8" />
-Figure 2: click on y0 labels to sort by name, price/roll, total price.
+Figure 2: visualize historic price, let you know if a film has dropped price recently.
 <img width="1844" height="1360" alt="image" src="https://github.com/user-attachments/assets/17bc5c72-b8ce-4a75-8b39-68f50e3e51a0" />
-Figure 3: in stock or out of stock status
+Figure 3: in stock or out of stock status, click on y0 labels to sort by name, price/roll, total price.
 ## What it does
 
 - **Searches 16+ retailers automatically** (B&H, KEH, Reformed Film Lab, Film Supply Club, CineStill, Moment, Austin Camera, B&C Camera, District Camera, OC Camera, Photocare, Samy's, Blue Moon, Catlabs, Freestyle, Ace Photo)
