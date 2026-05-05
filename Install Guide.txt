@@ -1,0 +1,152 @@
+Film Tracker - Quick Start Guide
+================================
+
+Welcome! This file walks you through getting started, even if you've never
+used Python or coding tools before.
+
+
+WHAT YOU NEED
+-------------
+
+Two free programs:
+
+  1. Python 3.10 or newer
+     Download: https://www.python.org/downloads/
+     IMPORTANT: When installing, CHECK THE BOX that says
+                "Add Python to PATH"
+                (it's at the bottom of the first install screen)
+
+  2. Google Chrome
+     Download: https://www.google.com/chrome/
+
+If you already have these installed, skip to "FIRST RUN" below.
+
+
+FIRST RUN
+---------
+
+  1. Make sure all the Film Tracker files are in one folder.
+     If you downloaded a ZIP, extract it first by right-clicking the ZIP
+     and choosing "Extract All...".
+
+  2. Double-click "setup.bat".
+     A black window will open. It checks your computer and installs
+     everything needed. This takes 2-5 minutes the first time.
+
+     If a popup tells you something is missing, follow the link to install
+     it, then run setup.bat again.
+
+  3. When setup is finished, double-click "run_tracker.bat".
+
+  4. A Chrome window will open. The first time only, please:
+     - Visit www.bhphotovideo.com (just open the homepage, no need to log in)
+     - Visit www.ebay.com (same)
+     - If either site asks you to "press and hold to verify you are human",
+       do it
+     This sets cookies that help the tracker bypass anti-bot detection.
+
+  5. Go back to the black command window and press any key when ready.
+
+  6. The tracker runs for 5-15 minutes. You'll see lines scroll by showing
+     each retailer being searched and each price being checked.
+
+  7. When it finishes, your browser opens "report.html" with all the
+     results: best deals, full price comparison, eBay listings, and a
+     price history plot.
+
+  8. The black command window stays open until you close it. You can
+     review the output or just close it.
+
+
+REGULAR USE
+-----------
+
+After the first run, you only need to:
+
+  Double-click "run_tracker.bat"
+
+That's it. Discovery results are cached for 7 days, so most runs only do
+the price check (~2-3 minutes).
+
+
+CUSTOMIZING
+-----------
+
+After your first run, a file called "config.txt" appears in the folder.
+Open it in Notepad to customize:
+
+  - Which retailers to track (set "yes" or "no" next to each name)
+  - Which film brands to search (Kodak, Fuji, etc.)
+  - Which film formats (120, 135, instax, etc.)
+  - Sales tax for your state
+  - Tax-free retailers (if you have a B&H Payboo card or Adorama EDGE)
+
+The file has comments explaining everything. Save your changes and run
+the tracker again to apply them.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+
+  Problem: Python wasn't found
+    Solution: Install Python from https://www.python.org/downloads/
+              CHECK "Add Python to PATH" during install.
+              Then run setup.bat again.
+
+  Problem: Chrome wasn't found
+    Solution: Install Chrome from https://www.google.com/chrome/
+
+  Problem: Some retailers say "bot challenge"
+    Solution: Open the Chrome window the tracker launched, visit those
+              retailers manually once, dismiss any "press and hold"
+              verifications. They'll work the next time.
+
+  Problem: The black window flashes and disappears
+    Solution: Right-click run_tracker.bat, choose "Edit", and look for
+              errors. Or take a screenshot and ask the project author.
+
+  Problem: Nothing opens after I double-click
+    Solution: Some antivirus software blocks .bat files. Try right-clicking
+              run_tracker.bat and choosing "Run as administrator".
+
+
+WHAT THIS PROGRAM DOES (AND DOESN'T) DO
+---------------------------------------
+
+  IT DOES:
+  - Read publicly displayed prices and stock status from retailer websites
+  - Save the data to CSV files in this folder
+  - Generate an HTML report you can open in your browser
+  - Plot price history over time after a few runs
+
+  IT DOES NOT:
+  - Make purchases
+  - Log into any accounts
+  - Send your data anywhere
+  - Track you or call home
+
+Everything stays on your computer.
+
+
+PRIVACY
+-------
+
+The "tracker_history.csv" and "ebay_history.csv" files contain only the
+prices and stock you saw on retailers' public web pages. No personal
+information is collected or transmitted.
+
+
+LICENSE
+-------
+
+This is free, open-source software (MIT License).
+You can modify it, share it, and use it however you like.
+
+
+HELP / FEEDBACK
+---------------
+
+If you find a retailer that doesn't work, or have a feature suggestion,
+visit the project page and open an "issue":
+
+  https://github.com/ftq2003/Film_tracker

@@ -117,6 +117,29 @@ DEFAULT_BRANDS = ['kodak', 'fuji', 'fujifilm', 'cinestill', 'ilford',
 DEFAULT_FORMATS = ['120']
 DEFAULT_INCLUDE_EBAY = True
 
+# ============================================================
+# State sales tax rates (2024-2026 base rates, no local additions)
+# Source: avg state-level rates. Local/county/city tax can add 0.5%-3%
+# in some areas — users in those areas should use the manual rate override.
+# ============================================================
+STATE_TAX_RATES = {
+    'AL': 4.00, 'AK': 0.00, 'AZ': 5.60, 'AR': 6.50, 'CA': 7.25,
+    'CO': 2.90, 'CT': 6.35, 'DE': 0.00, 'DC': 6.00, 'FL': 6.00,
+    'GA': 4.00, 'HI': 4.00, 'ID': 6.00, 'IL': 6.25, 'IN': 7.00,
+    'IA': 6.00, 'KS': 6.50, 'KY': 6.00, 'LA': 4.45, 'ME': 5.50,
+    'MD': 6.00, 'MA': 6.25, 'MI': 6.00, 'MN': 6.875,'MS': 7.00,
+    'MO': 4.225,'MT': 0.00, 'NE': 5.50, 'NV': 6.85, 'NH': 0.00,
+    'NJ': 6.625,'NM': 5.125,'NY': 4.00, 'NC': 4.75, 'ND': 5.00,
+    'OH': 5.75, 'OK': 4.50, 'OR': 0.00, 'PA': 6.00, 'RI': 7.00,
+    'SC': 6.00, 'SD': 4.20, 'TN': 7.00, 'TX': 6.25, 'UT': 6.10,
+    'VT': 6.00, 'VA': 5.30, 'WA': 6.50, 'WV': 6.00, 'WI': 5.00,
+    'WY': 4.00,
+}
+DEFAULT_TAX_STATE = ''       # blank = disabled
+DEFAULT_TAX_RATE_OVERRIDE = None
+DEFAULT_TAX_FREE_RETAILERS = []
+DEFAULT_TAX_ON_EBAY = True
+
 
 # ============================================================
 # 2. CONFIG FILE
@@ -203,20 +226,59 @@ CONFIG_TEMPLATE = """# =========================================================
 
 [ebay]
 include: {ebay}
+
+
+# ----------------------------------------------------------------------------
+# SALES TAX
+# ----------------------------------------------------------------------------
+# Adds estimated sales tax to prices so you can see the actual cost.
+# This is a state-level approximation — your real tax may be 0.5%-3% higher
+# in cities with local taxes (NYC, Chicago, Seattle, LA, etc.).
+#
+# state:  Your 2-letter state code (MA, NY, CA, etc.) — leave blank to skip.
+#         Built-in rates: AL 4%, AK 0%, AZ 5.6%, AR 6.5%, CA 7.25%, CO 2.9%,
+#         CT 6.35%, DE 0%, FL 6%, GA 4%, IL 6.25%, MA 6.25%, NJ 6.625%,
+#         NY 4%, OR 0%, PA 6%, TX 6.25%, WA 6.5%, etc.
+#
+# rate:   (Optional) override the state rate. Use this if you live in a
+#         high-local-tax area. Example: NYC residents pay ~8.875%, so:
+#           state: NY
+#           rate: 8.875
+#
+# tax_free_retailers:  Comma-separated list of retailer keys where you don't
+#         pay sales tax. The classic case: B&H Photo's Payboo card and
+#         Adorama's EDGE card both instantly rebate sales tax as store
+#         credit on every purchase. If you have one of those cards, list
+#         that retailer here.
+#
+# tax_on_ebay:  Whether to apply tax to eBay listings (yes/no). Most eBay
+#         sellers do collect state tax now, but it varies by seller.
+
+[tax]
+state: {tax_state}
+# rate: 8.875
+tax_free_retailers: {tax_free_retailers}
+tax_on_ebay: {tax_on_ebay}
 """
 
 
 def parse_config(path=CONFIG_FILE):
-    """Returns (retailers, brands, formats, include_ebay)."""
+    """Returns (retailers, brands, formats, include_ebay, tax_cfg).
+    tax_cfg is a dict with: state, rate (None or float),
+    tax_free_retailers (set of keys), tax_on_ebay (bool), effective_rate (float)"""
     if not os.path.exists(path):
         write_default_config(path)
         print(f'Created default {path} — edit it to customize.')
 
     section = None
     brands, formats = [], []
-    builtin_state = {}      # key -> enabled bool
-    custom_retailers = {}   # key -> {name, home, mode, enabled, platform: None (auto)}
+    builtin_state = {}
+    custom_retailers = {}
     include_ebay = True
+    tax_state = ''
+    tax_rate_override = None
+    tax_free_retailers = set()
+    tax_on_ebay = True
 
     with open(path, 'r', encoding='utf-8') as f:
         for raw in f:
@@ -232,18 +294,14 @@ def parse_config(path=CONFIG_FILE):
             elif section == 'retailers':
                 if ':' not in line: continue
                 key, val = line.split(':', 1)
-                # Strip inline comments (# B&H Photo ...) before yes/no check
                 val = val.split('#')[0].strip().lower()
                 builtin_state[key.strip()] = val in ('yes', 'true', '1', 'on', 'enabled')
             elif section == 'custom_retailers':
-                # Format: key : yes/no : Display Name : https://homepage
                 parts = [p.strip() for p in line.split(':', 3)]
                 if len(parts) < 4: continue
                 key, enabled_str, name, home = parts
-                # `home` may contain colons (https://) — that's why we split with maxsplit=3
                 if not key or not home.startswith(('http://', 'https://')):
                     continue
-                # Avoid colliding with built-ins
                 if key in DEFAULT_RETAILERS:
                     print(f'Warning: custom retailer key "{key}" conflicts with a built-in. Skipping.')
                     continue
@@ -251,7 +309,7 @@ def parse_config(path=CONFIG_FILE):
                     'name': name or key,
                     'home': home.rstrip('/'),
                     'mode': 'attach',
-                    'platform': None,  # to be auto-detected
+                    'platform': None,
                     'enabled': enabled_str.lower() in ('yes', 'true', '1', 'on', 'enabled'),
                     'is_custom': True,
                 }
@@ -259,13 +317,29 @@ def parse_config(path=CONFIG_FILE):
                 if line.lower().startswith('include:'):
                     val = line.split(':', 1)[1].split('#')[0].strip().lower()
                     include_ebay = val in ('yes', 'true', '1', 'on')
+            elif section == 'tax':
+                if ':' not in line: continue
+                key, val = line.split(':', 1)
+                key = key.strip().lower()
+                val = val.split('#')[0].strip()
+                if key == 'state':
+                    tax_state = val.upper()
+                elif key == 'rate':
+                    try:
+                        tax_rate_override = float(val)
+                    except ValueError:
+                        pass
+                elif key == 'tax_free_retailers':
+                    # Comma-separated list of retailer keys
+                    tax_free_retailers = set(
+                        r.strip().lower() for r in val.split(',') if r.strip())
+                elif key == 'tax_on_ebay':
+                    tax_on_ebay = val.lower() in ('yes', 'true', '1', 'on')
 
     # Build retailer config
     retailers = {}
     for key, cfg in DEFAULT_RETAILERS.items():
         retailers[key] = dict(cfg)
-        # If the config doesn't mention this retailer, fall back to its built-in
-        # default (some are disabled by default like Adorama and Catlabs)
         retailers[key]['enabled'] = builtin_state.get(key, cfg.get('enabled', True))
         retailers[key]['is_custom'] = False
     retailers.update(custom_retailers)
@@ -273,7 +347,27 @@ def parse_config(path=CONFIG_FILE):
     if not brands: brands = DEFAULT_BRANDS[:]
     if not formats: formats = DEFAULT_FORMATS[:]
 
-    return retailers, brands, formats, include_ebay
+    # Compute effective tax rate
+    effective_rate = 0.0
+    if tax_state and tax_state != 'SKIP':
+        if tax_rate_override is not None:
+            effective_rate = tax_rate_override
+        elif tax_state in STATE_TAX_RATES:
+            effective_rate = STATE_TAX_RATES[tax_state]
+        else:
+            print(f'Warning: unknown state code "{tax_state}". Tax disabled.')
+            tax_state = ''
+
+    tax_cfg = {
+        'state': tax_state,
+        'rate_override': tax_rate_override,
+        'tax_free_retailers': tax_free_retailers,
+        'tax_on_ebay': tax_on_ebay,
+        'effective_rate': effective_rate,  # percentage, e.g., 6.25
+        'enabled': bool(tax_state) and effective_rate > 0,
+    }
+
+    return retailers, brands, formats, include_ebay, tax_cfg
 
 
 def write_default_config(path=CONFIG_FILE):
@@ -297,7 +391,10 @@ def write_default_config(path=CONFIG_FILE):
     content = CONFIG_TEMPLATE.format(
         brands=brands_block, formats=formats_block,
         retailers=retailers_block,
-        ebay='yes' if DEFAULT_INCLUDE_EBAY else 'no')
+        ebay='yes' if DEFAULT_INCLUDE_EBAY else 'no',
+        tax_state=DEFAULT_TAX_STATE or '',
+        tax_free_retailers=', '.join(DEFAULT_TAX_FREE_RETAILERS) if DEFAULT_TAX_FREE_RETAILERS else '',
+        tax_on_ebay='yes' if DEFAULT_TAX_ON_EBAY else 'no')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content)
 
@@ -1694,6 +1791,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     border-radius: 3px; cursor: pointer; font-size: 11px; margin-left: 6px; }}
   .copy-btn:hover {{ background: #e0e0e0; }}
   .copy-btn.copied {{ background: #d4edda; border-color: #1a8e3a; color: #1a8e3a; }}
+  .tax-free-badge {{
+    display: inline-block; background: #e8f5e9; color: #1a8e3a;
+    padding: 1px 6px; border-radius: 3px; font-size: 10px;
+    font-weight: 600; text-transform: uppercase; margin-left: 4px;
+    border: 1px solid #1a8e3a;
+  }}
+  .tax-banner {{
+    background: #f0f4f8; border-left: 4px solid #2c5282;
+    padding: 12px 18px; margin: 16px 0; font-size: 13px;
+    border-radius: 4px; color: #2d3748;
+  }}
+  .tax-banner strong {{ color: #1a365d; }}
 </style></head><body>
 <h1>120 Film Tracker</h1>
 <div class="meta">Generated: {timestamp} • {n_listings} listings • {n_in_stock} in stock • {n_ebay} eBay listings</div>
@@ -1708,8 +1817,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 {manual_banner}
 
-<h2>Best Deals (cheapest in-stock per roll, fresh preferred)</h2>
+{tax_banner}
+
+<h2>Best Deals — Cheapest Listed Price (pre-tax)</h2>
 {best_deals_html}
+
+{best_deals_tax_section}
 
 <h2>Full Comparison</h2>
 <input type="text" class="filter" placeholder="Filter (e.g. 'portra' or 'in stock')…" oninput="filterTable(this, 'main-table')">
@@ -1771,9 +1884,31 @@ def _stock_html(in_stock):
     return '<span class="stock-q">?</span>'
 
 
-def _build_main_table(df):
+def _apply_tax(price, retailer_key, tax_cfg, retailers_cfg):
+    """Return after-tax price. Returns price unchanged if tax disabled,
+    retailer is tax-free, or price is None."""
+    if price is None or not tax_cfg or not tax_cfg.get('enabled'):
+        return price
+    cfg = (retailers_cfg or {}).get(retailer_key, {})
+    if cfg.get('tax_free'):
+        return price
+    rate = tax_cfg.get('effective_rate', 0.0)
+    return round(price * (1 + rate / 100.0), 2)
+
+
+def _retailer_key_for_name(retailer_name, retailers_cfg):
+    """Reverse lookup: given the display name like 'B&H Photo', find the key."""
+    if not retailers_cfg: return None
+    for key, cfg in retailers_cfg.items():
+        if cfg.get('name') == retailer_name:
+            return key
+    return None
+
+
+def _build_main_table(df, tax_cfg=None, retailers_cfg=None):
     if df.empty: return '<p>No data.</p>'
     df_sorted = df.sort_values(['film', 'price_per_roll'], na_position='last')
+    tax_enabled = tax_cfg and tax_cfg.get('enabled')
     rows = []
     for _, r in df_sorted.iterrows():
         price = f'${r.price_total:.2f}' if pd.notna(r.price_total) else '—'
@@ -1782,52 +1917,107 @@ def _build_main_table(df):
         exp = 'EXPIRED' if r.expired else ''
         cls = ' class="expired"' if r.expired else ''
         url_disp = (r.url[:40] + '…') if len(r.url) > 40 else r.url
+        # Tax columns
+        tax_cells = ''
+        if tax_enabled:
+            ret_key = _retailer_key_for_name(r.retailer, retailers_cfg)
+            cfg = (retailers_cfg or {}).get(ret_key, {}) if ret_key else {}
+            tax_free = cfg.get('tax_free', False)
+            with_tax = _apply_tax(r.price_total if pd.notna(r.price_total) else None,
+                                   ret_key, tax_cfg, retailers_cfg)
+            ppr_with_tax = _apply_tax(r.price_per_roll if pd.notna(r.price_per_roll) else None,
+                                       ret_key, tax_cfg, retailers_cfg)
+            with_tax_str = f'${with_tax:.2f}' if with_tax is not None else '—'
+            ppr_with_tax_str = f'${ppr_with_tax:.2f}' if ppr_with_tax is not None else '—'
+            badge = ' <span class="tax-free-badge">tax-free</span>' if tax_free else ''
+            tax_cells = (f'<td class="price">{with_tax_str}{badge}</td>'
+                         f'<td class="price">{ppr_with_tax_str}</td>')
         rows.append(
             f'<tr{cls}><td>{_esc(r.film)}</td><td>{_esc(r.retailer)}</td>'
             f'<td>{_stock_html(r.in_stock)}</td><td>{pack}</td><td>{exp}</td>'
             f'<td class="price">{price}</td><td class="price">{ppr}</td>'
+            f'{tax_cells}'
             f'<td>{_esc(r.shipping_info)}</td>'
             f'<td><a href="{_esc(r.url)}" target="_blank">{_esc(url_disp)}</a></td></tr>')
+    tax_headers = ''
+    if tax_enabled:
+        rate_label = f'{tax_cfg["effective_rate"]:.3g}%'
+        tax_headers = (f'<th>With Tax<br><small>({rate_label})</small></th>'
+                       f'<th>Per Roll<br><small>w/ tax</small></th>')
     return ('<table id="main-table"><thead><tr>'
             '<th>Film</th><th>Retailer</th><th>Stock</th><th>Pack</th>'
-            '<th>Status</th><th>Price</th><th>Per Roll</th><th>Shipping</th><th>URL</th>'
+            '<th>Status</th><th>Price</th><th>Per Roll</th>'
+            f'{tax_headers}'
+            '<th>Shipping</th><th>URL</th>'
             '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>')
 
 
-def _build_best_deals_html(df):
+def _build_best_deals_html(df, tax_cfg=None, retailers_cfg=None,
+                            use_tax=False, title_suffix=''):
+    """Builds 'cheapest in stock' table. If use_tax=True, ranks by after-tax
+    per-roll price; otherwise by listed per-roll price."""
     in_stock = df[df['in_stock'] == True].copy()
     if in_stock.empty: return '<p>Nothing in stock right now.</p>'
-    cheapest = in_stock.sort_values(['expired', 'price_per_roll']).groupby('film', as_index=False).first()
+    # Compute the comparison price column
+    if use_tax and tax_cfg and tax_cfg.get('enabled'):
+        def with_tax(row):
+            ret_key = _retailer_key_for_name(row['retailer'], retailers_cfg)
+            return _apply_tax(row['price_per_roll'], ret_key, tax_cfg, retailers_cfg)
+        in_stock['rank_price'] = in_stock.apply(with_tax, axis=1)
+    else:
+        in_stock['rank_price'] = in_stock['price_per_roll']
+    in_stock = in_stock[in_stock['rank_price'].notna()]
+    if in_stock.empty: return '<p>No prices available.</p>'
+    cheapest = in_stock.sort_values(['expired', 'rank_price']).groupby('film', as_index=False).first()
     rows = []
     for _, r in cheapest.iterrows():
-        ppr = f'${r.price_per_roll:.2f}' if pd.notna(r.price_per_roll) else '—'
-        price = f'${r.price_total:.2f}' if pd.notna(r.price_total) else '—'
         pack = f'{int(r.pack_size)}-pack' if r.pack_size > 1 else 'single'
         exp = 'EXPIRED' if r.expired else ''
+        ret_key = _retailer_key_for_name(r.retailer, retailers_cfg)
+        cfg = (retailers_cfg or {}).get(ret_key, {}) if ret_key else {}
+        tax_free = cfg.get('tax_free', False)
+        badge = ' <span class="tax-free-badge">tax-free</span>' if (tax_free and use_tax) else ''
+        if use_tax and tax_cfg and tax_cfg.get('enabled'):
+            tot = _apply_tax(r.price_total, ret_key, tax_cfg, retailers_cfg)
+            ppr = r.rank_price
+            tot_str = f'${tot:.2f}' if tot is not None else '—'
+            ppr_str = f'${ppr:.2f}' if pd.notna(ppr) else '—'
+        else:
+            tot_str = f'${r.price_total:.2f}' if pd.notna(r.price_total) else '—'
+            ppr_str = f'${r.price_per_roll:.2f}' if pd.notna(r.price_per_roll) else '—'
         rows.append(
-            f'<tr><td>{_esc(r.film)}</td><td>{_esc(r.retailer)}</td>'
+            f'<tr><td>{_esc(r.film)}</td><td>{_esc(r.retailer)}{badge}</td>'
             f'<td>{pack}</td><td>{exp}</td>'
-            f'<td class="price">{price}</td><td class="price">{ppr}</td>'
+            f'<td class="price">{tot_str}</td><td class="price">{ppr_str}</td>'
             f'<td><a href="{_esc(r.url)}" target="_blank">buy</a></td></tr>')
     return ('<table><thead><tr><th>Film</th><th>Retailer</th><th>Pack</th>'
             '<th>Status</th><th>Total</th><th>Per Roll</th><th>Link</th>'
             '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>')
 
 
-def _build_ebay_html(ebay_results):
+def _build_ebay_html(ebay_results, tax_cfg=None):
     if not ebay_results: return '<p>No eBay data this run.</p>'
+    apply_tax = (tax_cfg and tax_cfg.get('enabled') and
+                 tax_cfg.get('tax_on_ebay', True))
     rows = []
     for r in sorted(ebay_results, key=lambda x: (x.film, x.price)):
+        tax_cell = ''
+        if apply_tax:
+            with_tax = r.price * (1 + tax_cfg['effective_rate'] / 100.0)
+            tax_cell = f'<td class="price">${with_tax:.2f}</td>'
         rows.append(
             f'<tr><td>{_esc(r.film)}</td><td>{_esc(r.title)}</td>'
             f'<td class="price">${r.price:.2f}</td>'
+            f'{tax_cell}'
             f'<td>{_esc(r.shipping)}</td>'
             f'<td>{_esc(r.condition)}</td>'
             f'<td>{_esc(r.seller_loc)}</td>'
             f'<td><a href="{_esc(r.url)}" target="_blank">view</a></td></tr>')
-    return ('<table id="ebay-table"><thead><tr>'
-            '<th>Film</th><th>Title</th><th>Price</th><th>Shipping</th>'
-            '<th>Condition</th><th>Location</th><th>Link</th>'
+    headers = ['Film', 'Title', 'Price']
+    if apply_tax: headers.append(f'With Tax<br><small>({tax_cfg["effective_rate"]:.3g}%)</small>')
+    headers += ['Shipping', 'Condition', 'Location', 'Link']
+    th_html = ''.join(f'<th>{h}</th>' for h in headers)
+    return (f'<table id="ebay-table"><thead><tr>{th_html}'
             '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>')
 
 
@@ -1874,7 +2064,32 @@ def _build_diagnostics_html(diagnostics):
             + ''.join(rows) + '</tbody></table>')
 
 
-def write_html_report(df, ebay_results, discovered=None, diagnostics=None):
+def _build_tax_banner(tax_cfg, retailers_cfg):
+    """Renders an info banner explaining what tax is being applied."""
+    if not tax_cfg or not tax_cfg.get('enabled'):
+        return ''
+    state = tax_cfg['state']
+    rate = tax_cfg['effective_rate']
+    override_note = ' (custom rate)' if tax_cfg.get('rate_override') else ''
+    tax_free_keys = tax_cfg.get('tax_free_retailers', set())
+    tax_free_names = []
+    for key in tax_free_keys:
+        cfg = (retailers_cfg or {}).get(key)
+        if cfg:
+            tax_free_names.append(cfg['name'])
+    tax_free_str = ', '.join(tax_free_names) if tax_free_names else 'none'
+    return (
+        f'<div class="tax-banner">'
+        f'<strong>📊 Tax-aware pricing:</strong> Showing list price + '
+        f'estimated <strong>{rate:.3g}% {state}</strong> sales tax{override_note}. '
+        f'Tax-free retailers: <strong>{_esc(tax_free_str)}</strong>. '
+        f'<em>Note: this is a state-level approximation; your actual local tax '
+        f'may be higher in cities with local sales taxes.</em>'
+        f'</div>')
+
+
+def write_html_report(df, ebay_results, discovered=None, diagnostics=None,
+                      tax_cfg=None, retailers_cfg=None):
     n_listings = len(df)
     n_in_stock = int((df['in_stock'] == True).sum()) if not df.empty else 0
     n_errors = int((df['error'] != '').sum()) if not df.empty else 0
@@ -1882,14 +2097,29 @@ def write_html_report(df, ebay_results, discovered=None, diagnostics=None):
     plot_html = (f'<img class="plot" src="{PLOT_PNG}" alt="price history">'
                  if os.path.exists(PLOT_PNG)
                  else '<p>No plot yet — run again with more history to see trends.</p>')
+
+    # Tax-aware best deals section (only when tax is enabled)
+    tax_enabled = tax_cfg and tax_cfg.get('enabled')
+    if tax_enabled:
+        tax_deals = _build_best_deals_html(df, tax_cfg, retailers_cfg, use_tax=True)
+        rate = tax_cfg['effective_rate']
+        best_deals_tax_section = (
+            f'<h2>Best Deals — Cheapest Total Cost '
+            f'(after {rate:.3g}% tax, accounts for tax-free retailers)</h2>'
+            f'{tax_deals}')
+    else:
+        best_deals_tax_section = ''
+
     rendered = HTML_TEMPLATE.format(
         timestamp=_esc(datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
         n_listings=n_listings, n_in_stock=n_in_stock, n_errors=n_errors,
         n_films=n_films, n_ebay=len(ebay_results),
         manual_banner=_build_manual_check_banner(df),
-        best_deals_html=_build_best_deals_html(df),
-        main_html=_build_main_table(df),
-        ebay_html=_build_ebay_html(ebay_results),
+        tax_banner=_build_tax_banner(tax_cfg, retailers_cfg),
+        best_deals_html=_build_best_deals_html(df, tax_cfg, retailers_cfg, use_tax=False),
+        best_deals_tax_section=best_deals_tax_section,
+        main_html=_build_main_table(df, tax_cfg, retailers_cfg),
+        ebay_html=_build_ebay_html(ebay_results, tax_cfg),
         plot_html=plot_html,
         diagnostics_html=_build_diagnostics_html(diagnostics))
     with open(REPORT_HTML, 'w', encoding='utf-8') as f:
@@ -1988,11 +2218,19 @@ async def cmd_status(retailers_cfg):
 
 async def main(force_discover=False, skip_discover=False):
     migrate_history_if_needed()
-    retailers_cfg, brands, formats, include_ebay = parse_config()
+    retailers_cfg, brands, formats, include_ebay, tax_cfg = parse_config()
+    # Mark each retailer with its tax-free status for easy access later
+    for key, cfg in retailers_cfg.items():
+        cfg['tax_free'] = key.lower() in tax_cfg['tax_free_retailers']
     n_enabled = sum(1 for c in retailers_cfg.values() if c.get('enabled'))
     n_custom = sum(1 for c in retailers_cfg.values() if c.get('is_custom') and c.get('enabled'))
     print(f'Config: {n_enabled}/{len(retailers_cfg)} retailers enabled '
           f'({n_custom} custom), {len(brands)} brands, {len(formats)} formats')
+    if tax_cfg['enabled']:
+        n_tax_free = sum(1 for c in retailers_cfg.values() if c.get('tax_free'))
+        print(f'Tax: {tax_cfg["state"]} {tax_cfg["effective_rate"]:.3f}%'
+              f'{" (custom rate)" if tax_cfg["rate_override"] else ""}'
+              f' — {n_tax_free} tax-free retailer(s)')
 
     discovered, diagnostics = None, None
     if not skip_discover:
@@ -2032,7 +2270,7 @@ async def main(force_discover=False, skip_discover=False):
 
     detect_changes()
     make_plot()
-    write_html_report(df, ebay_results, discovered, diagnostics)
+    write_html_report(df, ebay_results, discovered, diagnostics, tax_cfg, retailers_cfg)
     try: webbrowser.open(os.path.abspath(REPORT_HTML))
     except Exception: pass
 
@@ -2057,7 +2295,7 @@ if __name__ == '__main__':
     elif arg == 'check':
         asyncio.run(main(skip_discover=True))
     elif arg == 'status':
-        retailers_cfg, _, _, _ = parse_config()
+        retailers_cfg, _, _, _, _ = parse_config()
         asyncio.run(cmd_status(retailers_cfg))
     elif arg == 'plot':
         make_plot()
