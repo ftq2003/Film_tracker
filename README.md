@@ -1,7 +1,19 @@
 # 120 Film Tracker
 
 A Python script that tracks **stock availability and prices for 120mm medium-format film** across major US camera retailers. It runs weekly auto-discovery to find new products, scrapes current prices, builds a sortable HTML report, and plots price history over time.
-
+<img width="1850" height="1455" alt="image" src="https://github.com/user-attachments/assets/8fff60fd-23c3-49d5-aa56-37727b6d0830" />
+Figure 1: Result page, you can check manually if the auto fetch is not successful.
+The HTML report opens automatically and includes:
+- Summary tiles (total checked, in stock, errors, eBay listings)
+- "URLs to check manually" — bot-blocked or parser-failed listings with copy-to-clipboard buttons
+- "Best Deals" — cheapest in-stock per film
+- Full sortable comparison table
+- eBay cheapest active listings per film
+- Price history plot (after a few runs accumulate data)
+<img width="1867" height="1338" alt="image" src="https://github.com/user-attachments/assets/a93709eb-81fc-4697-a578-4cb62c2603e8" />
+Figure 2: click on y0 labels to sort by name, price/roll, total price.
+<img width="1844" height="1360" alt="image" src="https://github.com/user-attachments/assets/17bc5c72-b8ce-4a75-8b39-68f50e3e51a0" />
+Figure 3: in stock or out of stock status
 ## What it does
 
 - **Searches 16+ retailers automatically** (B&H, KEH, Reformed Film Lab, Film Supply Club, CineStill, Moment, Austin Camera, B&C Camera, District Camera, OC Camera, Photocare, Samy's, Blue Moon, Catlabs, Freestyle, Ace Photo)
@@ -31,14 +43,6 @@ EBAY — searching for cheapest active listings per film
   · Kodak Tri-X 400 (120)          …  5 listings, cheapest $9.50
   ...
 ```
-
-The HTML report opens automatically and includes:
-- Summary tiles (total checked, in stock, errors, eBay listings)
-- "URLs to check manually" — bot-blocked or parser-failed listings with copy-to-clipboard buttons
-- "Best Deals" — cheapest in-stock per film
-- Full sortable comparison table
-- eBay cheapest active listings per film
-- Price history plot (after a few runs accumulate data)
 
 ## Requirements
 
