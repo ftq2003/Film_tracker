@@ -12,7 +12,7 @@ Two free programs:
 
   1. Python 3.10 or newer
      Download: https://www.python.org/downloads/
-     IMPORTANT: When installing, CHECK THE BOX that says
+     IMPORTANT (Windows): When installing, CHECK THE BOX that says
                 "Add Python to PATH"
                 (it's at the bottom of the first install screen)
 
@@ -22,8 +22,9 @@ Two free programs:
 If you already have these installed, skip to "FIRST RUN" below.
 
 
-FIRST RUN
----------
+==========================================================================
+WINDOWS USERS - FIRST RUN
+==========================================================================
 
   1. Make sure all the Film Tracker files are in one folder.
      If you downloaded a ZIP, extract it first by right-clicking the ZIP
@@ -39,7 +40,7 @@ FIRST RUN
   3. When setup is finished, double-click "run_tracker.bat".
 
   4. A Chrome window will open. The first time only, please:
-     - Visit www.bhphotovideo.com (just open the homepage, no need to log in)
+     - Visit www.bhphotovideo.com (just open the homepage)
      - Visit www.ebay.com (same)
      - If either site asks you to "press and hold to verify you are human",
        do it
@@ -47,36 +48,73 @@ FIRST RUN
 
   5. Go back to the black command window and press any key when ready.
 
-  6. The tracker runs for 5-15 minutes. You'll see lines scroll by showing
-     each retailer being searched and each price being checked.
+  6. The tracker runs for 5-15 minutes.
 
   7. When it finishes, your browser opens "report.html" with all the
-     results: best deals, full price comparison, eBay listings, and a
-     price history plot.
-
-  8. The black command window stays open until you close it. You can
-     review the output or just close it.
+     results.
 
 
-REGULAR USE
------------
+==========================================================================
+MAC USERS - FIRST RUN
+==========================================================================
+
+  1. Make sure all the Film Tracker files are in one folder.
+     If you downloaded a ZIP, extract it first by double-clicking it.
+
+  2. THE FIRST TIME ONLY: macOS may block .command files for security.
+     If you see "cannot be opened because the developer cannot be verified"
+     when double-clicking setup.command, do this instead:
+       - Right-click setup.command (or Control-click)
+       - Choose "Open" from the menu
+       - Click "Open" in the security dialog
+     After doing this once, double-click works normally.
+
+     ALTERNATIVE: Open Terminal, drag the film_tracker folder into the
+     Terminal window to fill in the path, then type:
+        chmod +x setup.command run_tracker.command
+     Press Enter. Now double-click works directly.
+
+  3. Double-click "setup.command".
+     A Terminal window opens. It checks your computer and installs
+     everything needed. This takes 2-5 minutes the first time.
+
+  4. When setup is finished, double-click "run_tracker.command".
+
+  5. A Chrome window will open. The first time only, please:
+     - Visit www.bhphotovideo.com (just open the homepage)
+     - Visit www.ebay.com (same)
+     - Dismiss any verification challenges that appear
+
+  6. Go back to the Terminal window and press Enter to start the tracker.
+
+  7. The tracker runs for 5-15 minutes.
+
+  8. When it finishes, your browser opens "report.html" with all the
+     results.
+
+
+==========================================================================
+REGULAR USE (BOTH PLATFORMS)
+==========================================================================
 
 After the first run, you only need to:
 
-  Double-click "run_tracker.bat"
+  Windows: double-click run_tracker.bat
+  Mac:     double-click run_tracker.command
 
 That's it. Discovery results are cached for 7 days, so most runs only do
 the price check (~2-3 minutes).
 
 
-CUSTOMIZING
------------
+==========================================================================
+CUSTOMIZING (BOTH PLATFORMS)
+==========================================================================
 
 After your first run, a file called "config.txt" appears in the folder.
-Open it in Notepad to customize:
+Open it in any text editor to customize:
 
   - Which retailers to track (set "yes" or "no" next to each name)
-  - Which film brands to search (Kodak, Fuji, etc.)
+  - Which film brands to search (Kodak, Fuji, Cinestill, etc.)
   - Which film formats (120, 135, instax, etc.)
   - Sales tax for your state
   - Tax-free retailers (if you have a B&H Payboo card or Adorama EDGE)
@@ -85,13 +123,16 @@ The file has comments explaining everything. Save your changes and run
 the tracker again to apply them.
 
 
+==========================================================================
 IF SOMETHING GOES WRONG
------------------------
+==========================================================================
 
   Problem: Python wasn't found
-    Solution: Install Python from https://www.python.org/downloads/
-              CHECK "Add Python to PATH" during install.
-              Then run setup.bat again.
+    Windows: Install Python from https://www.python.org/downloads/
+             CHECK "Add Python to PATH" during install.
+             Then run setup.bat again.
+    Mac:     Install Python from https://www.python.org/downloads/macos/
+             Then run setup.command again.
 
   Problem: Chrome wasn't found
     Solution: Install Chrome from https://www.google.com/chrome/
@@ -101,17 +142,26 @@ IF SOMETHING GOES WRONG
               retailers manually once, dismiss any "press and hold"
               verifications. They'll work the next time.
 
-  Problem: The black window flashes and disappears
+  Problem (Mac): "[file] cannot be opened because the developer cannot
+                  be verified"
+    Solution: Right-click the file and choose "Open" instead of double-
+              clicking. You only need to do this the first time.
+
+  Problem (Windows): The black window flashes and disappears
     Solution: Right-click run_tracker.bat, choose "Edit", and look for
               errors. Or take a screenshot and ask the project author.
 
   Problem: Nothing opens after I double-click
-    Solution: Some antivirus software blocks .bat files. Try right-clicking
-              run_tracker.bat and choosing "Run as administrator".
+    Windows: Some antivirus software blocks .bat files. Try right-clicking
+             run_tracker.bat and choosing "Run as administrator".
+    Mac:     Open Terminal and run:
+                chmod +x setup.command run_tracker.command
+             Then try double-clicking again.
 
 
+==========================================================================
 WHAT THIS PROGRAM DOES (AND DOESN'T) DO
----------------------------------------
+==========================================================================
 
   IT DOES:
   - Read publicly displayed prices and stock status from retailer websites
@@ -128,23 +178,26 @@ WHAT THIS PROGRAM DOES (AND DOESN'T) DO
 Everything stays on your computer.
 
 
+==========================================================================
 PRIVACY
--------
+==========================================================================
 
 The "tracker_history.csv" and "ebay_history.csv" files contain only the
 prices and stock you saw on retailers' public web pages. No personal
 information is collected or transmitted.
 
 
+==========================================================================
 LICENSE
--------
+==========================================================================
 
 This is free, open-source software (MIT License).
 You can modify it, share it, and use it however you like.
 
 
+==========================================================================
 HELP / FEEDBACK
----------------
+==========================================================================
 
 If you find a retailer that doesn't work, or have a feature suggestion,
 visit the project page and open an "issue":

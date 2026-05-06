@@ -1,19 +1,7 @@
 # 120 Film Tracker
 
 A Python script that tracks **stock availability and prices for 120mm medium-format film** across major US camera retailers. It runs weekly auto-discovery to find new products, scrapes current prices, builds a sortable HTML report, and plots price history over time.
-<img width="1850" height="1455" alt="image" src="https://github.com/user-attachments/assets/8fff60fd-23c3-49d5-aa56-37727b6d0830" />
-Figure 1: Result page, you can check manually if the auto fetch is not successful.
-The HTML report opens automatically and includes:
-- Summary tiles (total checked, in stock, errors, eBay listings)
-- "URLs to check manually" — bot-blocked or parser-failed listings with copy-to-clipboard buttons
-- "Best Deals" — cheapest in-stock per film
-- Full sortable comparison table
-- eBay cheapest active listings per film
-- Price history plot (after a few runs accumulate data)
-<img width="1867" height="1338" alt="image" src="https://github.com/user-attachments/assets/a93709eb-81fc-4697-a578-4cb62c2603e8" />
-Figure 2: visualize historic price, let you know if a film has dropped price recently.
-<img width="1844" height="1360" alt="image" src="https://github.com/user-attachments/assets/17bc5c72-b8ce-4a75-8b39-68f50e3e51a0" />
-Figure 3: in stock or out of stock status, click on y0 labels to sort by name, price/roll, total price.
+
 ## What it does
 
 - **Searches 16+ retailers automatically** (B&H, KEH, Reformed Film Lab, Film Supply Club, CineStill, Moment, Austin Camera, B&C Camera, District Camera, OC Camera, Photocare, Samy's, Blue Moon, Catlabs, Freestyle, Ace Photo)
@@ -44,10 +32,18 @@ EBAY — searching for cheapest active listings per film
   ...
 ```
 
+The HTML report opens automatically and includes:
+- Summary tiles (total checked, in stock, errors, eBay listings)
+- "URLs to check manually" — bot-blocked or parser-failed listings with copy-to-clipboard buttons
+- "Best Deals" — cheapest in-stock per film
+- Full sortable comparison table
+- eBay cheapest active listings per film
+- Price history plot (after a few runs accumulate data)
+
 ## Requirements
 
-- **Windows** (the launcher is a `.bat` file; the Python script itself is cross-platform but tested on Windows 11)
-- **Python 3.10+** — recommended via [miniconda](https://docs.conda.io/en/latest/miniconda.html)
+- **Windows or macOS** (Linux works too — see "Manual setup" below)
+- **Python 3.10+** — recommended via [miniconda](https://docs.conda.io/en/latest/miniconda.html) on Windows or via [python.org installer](https://www.python.org/downloads/macos/) on Mac
 - **Google Chrome** — used in remote-debug mode for sites with bot detection
 - **Internet connection** during runs
 - ~150 MB free disk for Playwright's bundled Chromium (downloaded on first run)
@@ -56,37 +52,37 @@ The script auto-installs all required Python packages on first run (`curl_cffi`,
 
 ## Quick start
 
-### Option A: Easy setup with the setup script
+### Windows
 
-1. **Clone the repo**:
-   ```
-   git clone https://github.com/YOURUSERNAME/film-tracker.git
-   cd film-tracker
-   ```
+1. Download the repo as a ZIP (green Code button → Download ZIP) and extract it.
+2. Double-click `setup.bat` — installs Python packages and verifies Chrome.
+3. Double-click `run_tracker.bat` — runs the tracker.
 
-2. **Run the setup script** (Windows):
-   ```
-   setup.bat
-   ```
-   This checks for Chrome, finds your Python install, and installs all required packages. If anything's missing, it tells you exactly what to do.
+### Mac
 
-3. **Run the tracker**:
-   ```
-   run_tracker.bat
-   ```
-   It launches a debug Chrome window, waits for you to dismiss any bot-detection challenges (visit B&H, Adorama, eBay once to set cookies), then runs the discovery + check.
+1. Download the repo as a ZIP and extract it.
+2. The first time you run a `.command` file, macOS may block it for security. **Right-click `setup.command` and choose "Open"** instead of double-clicking. After once, double-click works normally.
+   - Alternative: open Terminal and run `chmod +x setup.command run_tracker.command` in the project folder.
+3. Double-click `setup.command` — installs Python packages and verifies Chrome.
+4. Double-click `run_tracker.command` — runs the tracker.
 
-### Option B: Manual setup
+### Linux / Manual setup
 
-1. Install [Python 3.10+](https://www.python.org/downloads/) — make sure to check "Add to PATH" during install.
-2. Install [Google Chrome](https://www.google.com/chrome/).
-3. Download or clone this repo.
-4. Open Command Prompt in the folder and run:
+1. Install [Python 3.10+](https://www.python.org/downloads/) and [Google Chrome](https://www.google.com/chrome/).
+2. Download or clone this repo.
+3. In a terminal in the project folder, run:
    ```
    pip install curl_cffi beautifulsoup4 lxml pandas playwright matplotlib nest_asyncio
    playwright install chromium
    ```
-5. Double-click `run_tracker.bat`.
+4. Launch Chrome with debug mode in a separate terminal:
+   ```
+   google-chrome --remote-debugging-port=9222 --user-data-dir=$HOME/chrome-tracker
+   ```
+5. Run the script:
+   ```
+   python film_tracker.py
+   ```
 
 ## Commands
 
@@ -185,9 +181,12 @@ After a run, your folder will contain:
 
 ```
 film-tracker/
-├── film_tracker.py        # main script (~2000 lines)
+├── film_tracker.py        # main script (~2200 lines)
 ├── run_tracker.bat        # Windows one-click launcher
-├── setup.bat              # one-time environment setup
+├── run_tracker.command    # Mac one-click launcher
+├── setup.bat              # Windows one-time setup
+├── setup.command          # Mac one-time setup
+├── Install Guide.txt      # plain-language guide for non-technical users
 ├── README.md              # this file
 ├── .gitignore             # keeps generated data out of the repo
 ├── LICENSE                # MIT
